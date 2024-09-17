@@ -1,0 +1,195 @@
+@charset "UTF-8";
+
+#record_table {
+    text-align: left;
+}
+
+body {
+    background-color: #000;
+    color: #fff;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+.navbar {
+    display: flex;
+    justify-content: space-around;
+    background-color: #333;
+    padding: 10px 0;
+}
+
+.navbar button {
+    background: #555;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.navbar button:hover {
+    background: #777;
+}
+
+.content-area {
+    display: flex;
+    padding: 20px;
+}
+
+.left-side, .right-side {
+    flex: 1;
+    padding: 20px;
+}
+
+.left-side {
+    border-right: 1px solid #fff;
+    text-align: center;
+}
+
+#search-law-form input,
+#search-law-form textarea,
+#search-law-form button {
+    width: 60%;
+    margin: 10px 0;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+}
+
+#search-law-form input,
+#search-law-form textarea {
+    background-color: #222;
+    color: #fff;
+}
+
+#search-law-form button {
+    background-color: #444;
+    color: #fff;
+    cursor: pointer;
+}
+
+#search-law-form button:hover {
+    background-color: #666;
+}
+
+.law-content {
+    border-bottom: 1px solid white; /* 底部白色底線 */
+    margin-bottom: 20px; /* 與下一個元素的距離 */
+    padding: 10px 0; /* 讓內容與底線有些空間 */
+}
+
+.law-chapter {
+    font-weight: bold; /* 文字粗體 */
+    text-align: left;  /* 文字靠左對齊 */
+}
+
+.law-lines {
+    text-align: left;  /* 文字靠左對齊 */
+}
+
+#nav-chapter {
+    text-align: left;
+    position: absolute;
+    top:100px;
+    left:-50px;
+}
+
+.right{
+    padding-left:150px;
+    position:relative;
+}
+
+.chapter-li {
+    display:block;
+    background:#635F5F;
+    padding:20px;
+    width:100px;
+    color:#FFF;
+    text-decoration:none;
+    border-bottom:1px solid #777;
+}
+
+
+.chapter-li:hover {
+    background:#504E4E;
+}
+
+.chapter-li-2 a {
+    padding-left: 5px;
+}
+
+.chapter-ul-1, .chapter-ul-2 {
+    padding-left: 0;
+}
+
+li a{
+    display:block;
+    padding:20px 0;
+    color:#FDC825;
+    text-decoration:none;
+    color:#FFF;
+}
+
+#chapter-ul li li{
+    float:none;
+    border-top:1px solid #7F9492;
+}
+
+
+
+#chapter-ul li{
+    float:left;
+    width:150px;
+    text-align:left;
+    list-style-type:none;
+    font-weight:bold;
+}
+
+#chapter-ul li a:hover{
+    color:#FDC825;
+}
+
+
+
+
+
+ul ul{
+    display: none;
+    position: absolute;
+    width:250px;
+}
+
+
+#chapter-ul ul {
+    list-style: none;  /* 移除項目符號 */
+    padding-left: 0;   /* 移除內縮 */
+    margin-left: 0;    /* 取消左側外距 */
+}
+
+
+.chapter-ul-2 {
+    margin-left: 0; /* 移除縮排 */
+    position: relative; /* 保持在文檔流中 */
+    display: none; /* 預設隱藏 */
+    transform: scaleY(0); /* 初始狀態為縮放為 0，隱藏 */
+    transform-origin: top; /* 縮放的基準點設定為頂部 */
+    transition: transform 0.3s ease-out;
+}
+
+
+li li{
+    float:none;
+    border-top:1px solid #7F9492;
+}
+
+
+.chapter-ul-1 {
+    position: relative; /* 成為子層的參考點 */
+}
+
+/* 展開子層 */
+.chapter-li-1:hover > .chapter-ul-2 {
+    display: block; /* 顯示子層 */
+    transform: scaleY(1); /* 展開到正常大小 */
+}
+

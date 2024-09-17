@@ -1,0 +1,62 @@
+/* 確保父容器全屏並設置 Flexbox */
+#law-search-area {
+	display: flex;
+	justify-content: center; /* 水平置中 */
+	align-items: center; /* 垂直置中 */
+	height: 50vh; /* 區域高度設為全屏 */
+	width: 100vw; /* 區域寬度設為全屏 */
+	margin: 0;
+}
+
+/* 讓表單內容更居中美觀 */
+#law-search-area-form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px; /* 表單項目之間的間距 */
+}
+
+/* 標題的樣式 */
+#law-search-area-form h2 {
+	margin-bottom: 20px;
+}
+
+/* 輸入框和按鈕樣式 */
+#search-chapter {
+	padding: 10px;
+	width: 200px;
+	margin-bottom: 10px;
+}
+
+button[type="submit"] {
+	padding: 10px 20px;
+}
+
+.show-type-ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+}
+
+.show-type-li {
+	float: left;
+	width: 200px;
+	border-color: #FFFFFF;
+	background-color: #111111;
+	border-radius: 20px;
+	margin: 10px;
+	font-size: 15px;
+}
+
+.show-type-li a {
+	display: block;
+	color: white;
+	text-align: center;
+	padding: 14px 16px;
+	text-decoration: none;
+}
+
+.show-type-li a:hover {
+	background-color: #111;
+}
