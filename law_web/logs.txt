@@ -1,0 +1,8 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running `target/debug/law_web`
+[2024-09-21T07:31:03Z ERROR law_web] There is an error
+[2024-09-21T07:31:03Z INFO  law_web] This is info
+[2024-09-21T07:31:03Z WARN  law_web] There is a warn
+thread 'main' panicked at /Users/dongchenbin/.cargo/registry/src/index.crates.io-6f17d22bba15001f/warp-0.3.7/src/server.rs:217:27:
+error binding to 127.0.0.1:9090: error creating server listener: Address already in use (os error 48)
+note: run with `RUST_BACKTRACE=1` fgenvironment variable to display a backtrace

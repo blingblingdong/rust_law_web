@@ -18,7 +18,24 @@
 
 /* 標題的樣式 */
 #law-search-area-form h2 {
-	margin-bottom: 20px;
+	margin-bottom: 10px;
+	color: darkorange;
+}
+
+#law-search-area-form input,
+#law-search-area-form textarea,
+#law-search-area-form button {
+	width: 150%;
+	margin: 10px 0;
+	padding: 10px;
+	border: none;
+	font-size: 20px;
+	border-radius: 5px;
+}
+
+#law-search-area-form button {
+	background-color: darkorange;
+	font-weight: bold;
 }
 
 /* 輸入框和按鈕樣式 */
@@ -32,31 +49,261 @@ button[type="submit"] {
 	padding: 10px 20px;
 }
 
+
+
+
+#dir {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: repeat(5, 1fr);
+}
+
+.the-dir {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10px;
+	font-size: 20px;
+	width: 100px;
+}
+
+
+
+.add-dir {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10px;
+	font-size: 20px;
+	width: 100px;
+	cursor: pointer;
+}
+
+.the-dir:hover:before {
+	content: '\f07c'; /* Font Awesome 的 other icon */
+}
+
+.add-dir::before {
+	content: '\f055'; /* Font Awesome 的 folder icon 的 Unicode */
+	font-family: 'Font Awesome 5 Free'; /* 確保使用正確的字體家族 */
+	font-weight: 900; /* Solid icons 需要使用 900 的字重 */
+	color: #ff9300; /* 設定顏色 */ /* Unicode folder icon */
+	font-size: 50px;
+	margin-bottom: 23px;
+}
+
+.add-dir:hover:before {
+	color: #FFFFFF/* Font Awesome 的 other icon */
+}
+
+.the-dir::before {
+	content: '\f07b'; /* Font Awesome 的 folder icon 的 Unicode */
+	font-family: 'Font Awesome 5 Free'; /* 確保使用正確的字體家族 */
+	font-weight: 900; /* Solid icons 需要使用 900 的字重 */
+	color: #ff9300; /* 設定顏色 */ /* Unicode folder icon */
+	font-size: 50px;
+	margin-bottom: 5px;
+}
+
+
+@media only screen and (max-width: 786px) {
+	.header {
+		border-bottom: 2px solid black;
+	}
+
+
+	.header p {
+		padding-left: 80px !important;
+	}
+
+}
+
+.header-container {
+	align-items: center;
+	background-color: darkorange;
+	display: flex;
+}
+
+.header {
+	background-color: darkorange;
+	display: flex;
+	align-items: center;
+}
+
+.header p {
+	text-align: center;
+	writing-mode: horizontal-tb;
+	font-family: "Playwrite DE Grund", cursive;
+	padding-left: 20px;
+	margin-top: 0px;
+	margin-bottom: 0px;
+	color: black;
+}
+
+
+.header h1 {
+	color: #111111;
+	text-align: center;
+	margin-top: 0px;
+	margin-bottom: 0px;
+	padding: 30px 0px;
+	font-family: "Playwrite DE Grund", cursive;
+	border-bottom: 0px !important;
+}
+
+
+.navbar {
+	display: flex;
+	justify-content: space-around;
+	list-style-type:none;
+	background-color: darkorange;
+}
+
+.navbar li {
+	background-color: darkorange;
+	color: black;
+	cursor: pointer;
+	text-align: center;
+	transition: background 0.3s;
+	border-radius: 5px;
+	border: 2px solid black;
+	font-size: 20px;
+	font-weight: 1000;
+	padding: 10px 20px;
+}
+
+
+
+.navbar li:hover {
+	background: black;
+	color: darkorange;
+}
+
+#search-law-form button {
+	background-color: #444;
+	color: #fff;
+	cursor: pointer;
+	background-color: darkorange;
+	color: black;
+	border: 1px solid black;
+	font-size: 15px;
+	font-weight: 1000;
+}
+
+#search-law-form button:hover {
+	background-color: black;
+	color: darkorange;
+	border: 1px solid darkorange;
+}
+
+@media only screen and (max-width: 786px) {
+	.header-container {
+		align-items: center;
+		background-color: darkorange;
+		display: block;
+	}
+
+	.header h1 {
+		padding: 5px 0px;
+		border-bottom: 1px solid black;
+	}
+
+	.navbar li {
+		font-size: 15px;
+		font-weight: 1000;
+		margin: 10px;
+	}
+
+	#dir {
+		display: grid;
+		gap: 10px;
+		grid-template-columns: repeat(3, 1fr);
+	}
+
+
+}
+
+.back-to-search, .back-to-nav {
+	font-weight: 900; /* Solid icons 需要使用 900 的字重 */
+	color: black; /* 設定顏色 */ /* Unicode folder icon */
+	font-size: 50px;
+}
+
+.show-type-nav-footer {
+	position: fixed;
+	bottom: 0;
+	background-color: darkorange;
+	display: flex;
+	width: 100%;
+	margin: 0;
+}
+
+.chapter_is {
+	font-size: 50px;
+	color: black;
+	justify-content: center;
+}
+
 .show-type-ul {
-	list-style-type: none;
+	display: grid;
+	gap: 0px;
+	grid-template-rows: repeat(3, 1fr);
+	list-style-type:none;
+	text-align: center;
 	margin: 0;
 	padding: 0;
-	overflow: hidden;
 }
 
-.show-type-li {
-	float: left;
-	width: 200px;
-	border-color: #FFFFFF;
-	background-color: #111111;
-	border-radius: 20px;
-	margin: 10px;
-	font-size: 15px;
+#show-type-nav {
+	text-align: left;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;/* 給予整個網頁高度，確保底部對齊可以發揮作用 */
+	margin: 0;
+	padding: 0;/* 移除預設邊距 */
 }
 
-.show-type-li a {
-	display: block;
-	color: white;
-	text-align: center;
-	padding: 14px 16px;
-	text-decoration: none;
+#test-area {
+	margin: 0;
+	padding: 0;
 }
 
-.show-type-li a:hover {
-	background-color: #111;
+
+
+.show-type-li{
+	font-size: 30px;
+	padding: 40px 0px;
 }
+
+
+#show-type-string:before {
+	content: "\f002";
+	font-family: 'Font Awesome 5 Free';
+	font-size: 40px;
+	color: darkorange;
+}
+
+#show-type-all:before {
+	content: "\f02d";
+	font-family: 'Font Awesome 5 Free';
+	font-size: 40px;
+	color: darkorange;
+}
+
+
+#show-type-chapter:before {
+	content: "\f03a";
+	font-family: 'Font Awesome 5 Free';
+	font-size: 40px;
+	color: darkorange;
+}
+
+#show-type-chapter:hover:before,
+#show-type-all:hover:before,
+#show-type-string:hover:before {
+	color: #FFFFFF;
+}
+
+
+
+

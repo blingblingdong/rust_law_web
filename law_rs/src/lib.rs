@@ -1,12 +1,12 @@
+#[allow(unused_imports)]
 use std::error::Error;
-use std::fmt::format;
 use std::fs::File;
-use std::io;
-use std::io::{BufRead, BufReader, Read};
 use csv::{Reader, Writer};
 use anyhow::Result;
-use indexmap::{IndexMap, IndexSet};
+use indexmap::{IndexMap};
 use serde::Deserialize;
+use sqlx::postgres::{PgPoolOptions, PgPool, PgRow};
+use sqlx::{Row};
 
 #[derive(Clone)]
 pub struct Laws {
@@ -75,21 +75,15 @@ impl crate::Laws {
     }
 
     pub fn categories(&self, index:usize) -> IndexMap<String, crate::Laws> {
-        let vec: Vec<String> = self.lines
-            .iter()
-            .map(|x| {
-                let name_vec = x.chapter.split('/').collect::<Vec<&str>>();
-                name_vec.get(index).unwrap().to_string()
-            })
-            .collect();
-
         let mut map = IndexMap::new();
-        for (law, name) in self.lines.iter().zip(vec) {
-            map.entry(name).or_insert_with(crate::Laws::new).lines.push(law.clone());
+        for law in &self.lines {
+            let name_vec = law.chapter.split('/').collect::<Vec<&str>>();
+            if name_vec.len() > index {
+                let name = name_vec.get(index).unwrap().to_string();
+                map.entry(name).or_insert_with(crate::Laws::new).lines.push(law.clone());
+            }
         }
         map
-
-
     }
 
     pub fn search_in_html_chapter(&self, chapter: String) -> String {
@@ -97,7 +91,7 @@ impl crate::Laws {
         let l = binding.get(&chapter).unwrap();
         let chapter_num = self.lines.first().unwrap().chapter.split("/").count();
         let mut html_text = String::new();
-        l.print_all_chapter_html(1, 3, &mut html_text);
+        l.print_all_chapter_html(1, chapter_num, &mut html_text);
         html_text
     }
 
@@ -136,7 +130,8 @@ impl crate::Laws {
         let mut html_text = String::new();
         let binding2 = l.categories(num.parse().unwrap());
         let l2 = binding2.get(&chapter2).unwrap();
-        l2.print_all_html(num.parse().unwrap(), 3, &mut html_text);
+        let chapter_num = l2.lines.first().unwrap().chapter.split("/").count();
+        l2.print_all_html(num.parse().unwrap(), chapter_num, &mut html_text);
         html_text
     }
 
@@ -146,7 +141,7 @@ impl crate::Laws {
         let l = binding.get(&chapter).unwrap();
         let chapter_num = self.lines.first().unwrap().chapter.split("/").count();
         let mut html_text = String::new();
-        l.print_all_html(0, 3, &mut html_text);
+        l.print_all_html(0, chapter_num, &mut html_text);
         html_text
     }
 
@@ -172,7 +167,7 @@ impl crate::Laws {
 
     fn print_categories(&self, level: usize, max_level: usize) {
         if level == max_level {
-            let chapter = self.lines.first().unwrap().chapter.split("/").last().unwrap();
+            let _chapter = self.lines.first().unwrap().chapter.split("/").last().unwrap();
             for l in &self.lines {
                 println!("{}", l.num);
             }
@@ -186,6 +181,29 @@ impl crate::Laws {
         }
     }
 
+    pub async fn from_pool(db_url: &str) -> Result<Self, sqlx::Error> {
+        let db_pool = match PgPoolOptions::new()
+            .max_connections(5)
+            .connect(db_url).await {
+            Ok(pool) => pool,
+            Err(e) => panic!("sss {}", e),
+        };
+        match sqlx::query("SELECT * FROM law
+        ORDER BY created_at ASC;")
+            .map(|row: PgRow| law{
+                id: row.get("id"),
+                num: row.get("num"),
+                line: row.get("line"),
+                href: row.get("href"),
+                chapter: row.get("chapter")
+            })
+            .fetch_all(&db_pool)
+            .await{
+                Ok(lines) => Ok(Laws{lines}),
+                Err(_e) => Err(sqlx::Error::WorkerCrashed)
+        }
+    }
+
 
     pub fn view(&self) {
         println!("本章節總共有：{}", self.lines.len());
@@ -194,7 +212,7 @@ impl crate::Laws {
 
 }
 
-pub fn group(mut map:IndexMap<String, Laws>) -> Laws {
+pub fn group(map:IndexMap<String, Laws>) -> Laws {
     let key = map.iter().last().unwrap();
     let mut num : usize;
     for (i, law) in key.1.lines.first().unwrap().chapter.split("/").enumerate() {
@@ -211,6 +229,7 @@ pub fn group(mut map:IndexMap<String, Laws>) -> Laws {
     l
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, serde::Deserialize, Clone)]
 pub struct law {
     pub id: String,
@@ -232,7 +251,8 @@ where
 
 impl crate::law {
     pub fn new(num: String, line:Vec<String> , href: String, chapter: String) -> Self {
-        let id = format!("{}-{}",line.first().unwrap().to_string(), num);
+        let vec: Vec<_> = chapter.split("/").collect();
+        let id = format!("{}-{}",vec.first().unwrap().to_string(), num);
         crate::law {
             id,
             num,
@@ -250,19 +270,88 @@ impl crate::law {
 
     pub fn law_block(&self) -> String {
         let mut s = String::new();
+        s.push_str("<div class='container'><div class='box1'>");
         s.push_str("<div class='law-content'>");
         let chapter = format!("<div class='law-chapter'>{}</div>", self.format_chapter());
         s.push_str(&chapter);
         let line: String = self.line.iter().enumerate()
-            .map(|(i, s)| format!("<div 'law-line'>{}:{s}</div>",i+1)).collect();
-        let lines = format!("<div 'law-lines'>{}</div>", line);
+            .map(|(i, s)| format!("<div class='law-line'>{}:{s}</div>",i+1)).collect();
+        let lines = format!("<div class='law-lines'>{}</div>", line);
         s.push_str(&lines);
+        s.push_str("</div></div>");
+        let add_but = format!("<div class='box3'><button class='add-law' id='add-{}'>新增至</button></div>", self.id);
+        s.push_str(&add_but);
+        s.push_str("</div>");
+        s
+    }
+
+    pub fn law_block_result(&self) -> String {
+        let mut s = String::new();
+        s.push_str("<div class='box1'>");
+        s.push_str("<div class='law-content'>");
+        let chapter = format!("<div class='law-chapter'>{}</div>", self.format_chapter());
+        s.push_str(&chapter);
+        let line: String = self.line.iter().enumerate()
+            .map(|(i, s)| format!("<div class='law-line'>{}:{s}</div>",i+1)).collect();
+        let lines = format!("<div class='law-lines'>{}</div>", line);
+        s.push_str(&lines);
+        s.push_str("</div></div>");
+        let add_but = format!("<div class='box3'><button class='add-law' id='add-{}'>新增至</button></div>", self.id);
+        s.push_str(&add_but);
+        s
+    }
+
+    pub fn law_block_delete(&self, notepoo: String) -> String {
+        let mut s = String::new();
+        let chapter: Vec<&str> = self.chapter.split("/").collect();
+        let c = chapter.first().unwrap();
+        s.push_str("<div class='law-card'>");
+        s.push_str("<div class='law-card-up'>");
+        s.push_str("<div class='card-law-content'>");
+        let chapter = format!("<div class='card-law-chapter'><div class='title'>{}</div><div class='num'>第{}條</div></div>", c, self.num);
+        s.push_str(&chapter);
+        let line: String = self.line.iter().enumerate()
+            .map(|(i, s)| format!("<div class='card-law-line'>{}:{s}</div>",i+1)).collect();
+        s.push_str("<div class='card-law-note' id='card-law-note-{}' style='display: none;'>筆記</div>");
+        let lines = format!("<div class='card-law-lines' id='card-law-lines-{}'>{}</div>",self.id, line);
+        s.push_str(&lines);
+        s.push_str("</div>");
+        let delete_but = format!("<div class='card-tools'><button class='delete-law' id='delete-{}'></button><button class='toggle-note-law' id='toggle-note-{}'></button></div>", self.id, self.id);
+        s.push_str(&delete_but);
+        s.push_str("</div>");
+        let note = format!("<div class='card-law-note' id='card-law-note-{}' style='display: none;'>", self.id);
+        s.push_str(note.as_str());
+        s.push_str("<div class='note-title'>筆記</div>");
+        let note2 = format!("<div class='law-note-area' id='law-note-area-{}'>{}</div>", self.id, notepoo);
+        s.push_str(note2.as_str());
+        let note_but = format!("<div class='note-tools'><button class='note-edit-btn' id='note-edit-btn-{}'></button><button class='note-hide-btn' id='note-hide-btn-{}'></button></div>", self.id, self.id);
+        s.push_str(note_but.as_str());
+        s.push_str("</div>");
         s.push_str("</div>");
         s
     }
 
     pub fn update_chapter(&mut self, chapter: String) {
         self.chapter = chapter;
+    }
+
+
+
+    pub async fn add_to_pool(&self, pool: &PgPool) {
+        match sqlx::query(
+            "INSERT INTO law (id, num, line, href, chapter) VALUES ($1, $2, $3, $4, $5)"
+        )
+            .bind(self.id.clone())
+            .bind(self.num.clone())
+            .bind(self.line.clone())
+            .bind(self.href.clone())
+            .bind(self.chapter.clone())
+            .execute(pool)
+            .await
+        {
+            Ok(_) => println!("Insert successful"),
+            Err(e) => eprintln!("Insert failed: {}", e),
+        }
     }
 }
 
@@ -277,5 +366,15 @@ pub fn write_law(path: String, vec: Vec<crate::law>) -> Result<(), Box<dyn Error
     println!("寫入成功");
     wtr.flush()?;
     Ok(())
+}
+
+pub async fn new_pool() -> PgPool {
+    let db_pool = match PgPoolOptions::new()
+        .max_connections(5)
+        .connect("postgres://dbuser:12345678@localhost:5432/law").await {
+        Ok(pool) => pool,
+        Err(e) => panic!("sss {}", e),
+    };
+    db_pool
 }
 

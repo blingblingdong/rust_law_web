@@ -1,87 +1,59 @@
-pub mod store;
-use crate::store::{LawRecord, Records, Store};
-use percent_encoding::percent_decode_str;
-use warp::http::StatusCode;
-
-pub async fn get_table(cate: String, num: String, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-    let cate = percent_decode_str(&cate).decode_utf8_lossy();
-    let num = percent_decode_str(&num).decode_utf8_lossy();
-    let res= store.laws.read().await;
-    let n = res.filter_by_cate2(cate.to_string(), num.to_string());
-    Ok(warp::reply::html(n))
-}
-
-pub async fn add_record(records: Records, law_record: LawRecord) -> Result<impl warp::Reply, warp::Rejection> {
-    records.push_records(law_record).await;
-    Ok(warp::reply::with_status("Records added", StatusCode::OK))
-}
-
-pub async fn get_records(records: Records) -> Result<impl warp::Reply, warp::Rejection> {
-    Ok(warp::reply::html(records.show_records().await))
-}
-
-pub async fn get_all_lines(cate: String, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-    let cate = percent_decode_str(&cate).decode_utf8_lossy();
-    let res= store.laws.read().await;
-    let n = res.all_in_html(cate.to_string());
-    Ok(warp::reply::html(n))
-}
-
-pub async fn get_all_chapters(store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-    let res= store.laws.read().await;
-    let mut s = String::new();
-    for key in res.categories(0).keys() {
-        let format_key = format!("<li class='chapter-li'><a>{}</a></li>", key);
-        s.push_str(&format_key);
-    }
-    Ok(warp::reply::html(s))
-}
-
-pub async fn get_search_chapters(cate: String, store: Store)-> Result<impl warp::Reply, warp::Rejection> {
-    let cate = percent_decode_str(&cate).decode_utf8_lossy();
-    let res= store.laws.read().await;
-    let n = res.search_in_html_chapter(cate.to_string());
-    Ok(warp::reply::html(n))
-}
-
-pub async fn get_records_to_laws(records: Records, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-    let res = store.laws.read().await;
-    let mut s = String::new();
-    let laws = records.get_laws(res.to_owned());
-    for l in laws.await.lines {
-        s.push_str(&l.law_block());
-    }
-    Ok(warp::reply::html(s))
-}
-
-pub async fn get_lines_by_chapter(chapter1: String, num: String, chapter2: String, store: Store) -> Result<impl warp::Reply, warp::Rejection> {
-    let chapter1 = percent_decode_str(&chapter1).decode_utf8_lossy();
-    let num = percent_decode_str(&num).decode_utf8_lossy();
-    let chapter2 = percent_decode_str(&chapter2).decode_utf8_lossy();
-    println!("{chapter1}{num}{chapter2}");
-    let res = store.laws.read().await;
-    let s = res.chapter_lines_in_html(chapter1.into_owned(), num.into_owned(), chapter2.into_owned());
-    Ok(warp::reply::html(s))
-}
-
-
+pub mod types;
+pub mod routes;
+#[allow(unused_imports)]
 use handle_errors::return_error;
 use warp::{http::Method, Filter};
-
-
+use law_rs::Laws;
+use tracing_subscriber::fmt::format::FmtSpan;
+use crate::routes::file::{get_content_markdown, update_content};
+use crate::routes::record::{get_dir_for_pop, update_note};
 
 #[tokio::main]
 async fn main() {
 
-    let store = store::Store::new();
+    let log_filter = std::env::var("RUST_LOG")
+        .unwrap_or_else(|_|
+        "law_web=info,warp=error".to_owned());
+
+    tracing_subscriber::fmt()
+        .with_env_filter(log_filter)
+        .with_span_events(FmtSpan::CLOSE)
+        .init();
+
+    let db_url = "postgres://dbuser:12345678@localhost:5432/law";
+    let store = Laws::from_pool(&db_url).await.unwrap();
     let store_filter = warp::any().map(move || store.clone());
-    let record = store::Records::new();
+    let record = types::record::Records::new(&db_url).await;
     let record_filter = warp::any().map(move || record.clone());
+
+    let files = types::file::Files::new(&db_url).await;
+    let files_filter = warp::any().map(move || files.clone());
 
     let cors = warp::cors()
         .allow_any_origin()
         .allow_header("content-type")
         .allow_methods(&[Method::PUT, Method::DELETE, Method::GET, Method::POST]);
+
+    let get_dir = warp::get()
+        .and(warp::path("all_dir"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(record_filter.clone())
+        .and_then(routes::record::get_dir);
+
+    let delete_dir_by_name = warp::delete()
+        .and(warp::path("delete_dir_by_name"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(record_filter.clone())
+        .and_then(routes::record::delete_dir_by_name);
+
+    let get_dir_for_pop = warp::get()
+        .and(warp::path("dir_for_pop"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(record_filter.clone())
+        .and_then(routes::record::get_dir_for_pop);
 
     let get_table = warp::get()
         .and(warp::path("questions"))
@@ -89,7 +61,15 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(get_table);
+        .and_then(routes::law::get_table)
+        .with(warp::trace(|info| {
+            tracing::info_span!(
+                "get_questions request",
+                method = %info.method(),
+                path = %info.path(),
+                id = %uuid::Uuid::new_v4(),
+            )})
+        );
 
     let get_all_lines = warp::get()
         .and(warp::path("questions"))
@@ -97,40 +77,38 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(get_all_lines);
+        .and_then(routes::law::get_all_lines);
 
     let get_search_chapters = warp::get()
         .and(warp::path("search"))
         .and(warp::path::param::<String>())
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(get_search_chapters);
+        .and_then(routes::law::get_search_chapters);
 
     let get_all_chapters = warp::get()
         .and(warp::path("all_chapters"))
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(get_all_chapters);
+        .and_then(routes::law::get_all_chapters);
 
-    let get_records = warp::get()
-        .and(warp::path("questions"))
-        .and(warp::path::end())
-        .and(record_filter.clone())
-        .and_then(get_records);
+
 
     let add_record = warp::post()
         .and(warp::path("questions"))
         .and(warp::path::end())
         .and(record_filter.clone())
         .and(warp::body::json())
-        .and_then(add_record);
+        .and_then(routes::record::add_record);
 
     let get_records_to_laws = warp::get()
         .and(warp::path("records_to_laws"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
         .and(warp::path::end())
         .and(record_filter.clone())
         .and(store_filter.clone())
-        .and_then(get_records_to_laws);
+        .and_then(routes::record::get_records_to_laws);
 
     let get_lines_by_chapter = warp::get()
         .and(warp::path("lines_by_chapter"))
@@ -139,7 +117,46 @@ async fn main() {
         .and(warp::path::param::<String>())
         .and(warp::path::end())
         .and(store_filter.clone())
-        .and_then(get_lines_by_chapter);
+        .and_then(routes::law::get_lines_by_chapter);
+
+    let update_note = warp::put()
+        .and(warp::path("update_note"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(record_filter.clone())
+        .and(warp::body::json())
+        .and_then(routes::record::update_note);
+
+    let add_file = warp::post()
+        .and(warp::path("file"))
+        .and(warp::path::end())
+        .and(files_filter.clone())
+        .and(warp::body::json())
+        .and_then(routes::file::add_file);
+
+    let update_content = warp::put()
+        .and(warp::path("file"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(files_filter.clone())
+        .and(warp::body::json())
+        .and_then(routes::file::update_content);
+
+    let get_content_markdown = warp::get()
+        .and(warp::path("file_markdown"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(files_filter.clone())
+        .and_then(routes::file::get_content_markdown);
+
+    let get_content_html = warp::get()
+        .and(warp::path("file_html"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(files_filter.clone())
+        .and_then(routes::file::get_content_html);
+
+
 
     let static_files = warp::fs::dir("static");
 
@@ -149,12 +166,20 @@ async fn main() {
     let routes = get_all_lines
         .or(static_files)
         .or(add_record)
-        .or(get_records)
         .or(get_table)
+        .or(get_dir)
+        .or(get_content_markdown)
         .or(get_search_chapters)
         .or(get_all_chapters)
         .or(get_records_to_laws)
-        .or(get_lines_by_chapter)// 提供靜態文件
+        .or(get_lines_by_chapter)
+        .or(get_dir_for_pop)
+        .or(delete_dir_by_name)
+        .or(get_content_html)
+        .or(update_note)
+        .or(add_file)
+        .or(update_content)
+        .with(warp::trace::request())// 提供靜態文件
         .with(cors)
         .recover(return_error);
 

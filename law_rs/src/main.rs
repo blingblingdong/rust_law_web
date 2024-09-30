@@ -1,10 +1,12 @@
+#[allow(unused_imports)]
 use std::error::Error;
 use csv::Writer;
 use serde::Deserialize;
-use law_rs::{law, Laws};
+use law_rs::{law, new_pool, Laws};
 
+#[allow(non_camel_case_types)]
 #[derive(Debug, serde::Deserialize, Clone)]
-struct New_Law {
+pub struct New_Law {
     pub id: String,
     pub num: String,
     #[serde(deserialize_with = "deserialize_line")]
@@ -47,7 +49,11 @@ pub fn new_write_law(path: String, vec: Vec<New_Law>) -> anyhow::Result<(), Box<
     Ok(())
 }
 
-fn main() {
-   let laws = Laws::from_csv("new_all.csv".to_string());
-   laws.view();
+#[tokio::main]
+async fn main()  {
+    let db_url = "postgres://dbuser:12345678@localhost:5432/law";
+    let store = Laws::from_pool(&db_url).await.unwrap();
+    let map = store.categories(0);
+    let x = map.keys().filter(|k| *k!= "").count();
+    println!("{x}");
 }
