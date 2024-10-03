@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="css/ff.css">
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdn.ckeditor.com/ckeditor5/43.1.1/ckeditor5.css">
     <link rel="stylesheet" href="css/record.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -82,43 +83,16 @@
                 </div>
             </div>
             <div id="record-writer" style="display: none">
-                <div id="preview"></div>
-                <div id="editor-tool">
-                    <textarea id="markdown"></textarea>
-                    <div id="editor-btn-list1">
-                        <button id="add-card">add</button>
-                        <button id="add-color"><i class="fa-solid fa-palette"></i></button>
-                        <input type="color" id="color-picker" style="display:none;">
-                        <button id="add-css">css</button>
-                        <button><i class="fa-solid fa-xmark"></i></button>
-                    </div>
-                    <div id="editor-btn-list2">
-                        <button id="add-bold">bold</button>
-                        <button id="add-picture">照片</button>
-                        <button>更多</button>
-                        <button id="confirm-edit"><i class="fa-solid fa-check"></i></button>
-                    </div>
+                <div id="editor-area" style="display: flex">
+                    <div>h2rrrrrrffrfr</div>
+                    <div id="markdown"></div>
                 </div>
+
+
+                <button id="cancel-edit">取消</button>
+                <button id="confirm-edit">確認</button>
+
             </div>
-
-
-
-
-            <!-- 引入 Showdown -->
-            <script src="https://cdn.jsdelivr.net/npm/showdown/dist/showdown.min.js"></script>
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    var converter = new showdown.Converter();
-                    var textArea = document.getElementById('markdown');
-                    var previewDiv = document.getElementById('preview');
-
-                    textArea.addEventListener('input', function() {
-                        var markdownText = textArea.value;
-                        var html = converter.makeHtml(markdownText);
-                        previewDiv.innerHTML = html;
-                    });
-                });
-            </script>
         </div>
         <div id="record_table"></div>
     </div>
@@ -174,10 +148,22 @@
 
 </div>
 
+<script type="importmap">
+    {
+        "imports": {
+            "ckeditor5": "https://cdn.ckeditor.com/ckeditor5/43.1.1/ckeditor5.js",
+            "ckeditor5/": "https://cdn.ckeditor.com/ckeditor5/43.1.1/"
+        }
+    }
+</script>
+
 
 <script src="js/jquery-2.1.4.min.js"></script>
-<script src="js/script.js"></script>
+<script type="module" src="js/script.js"></script>
+<script type="module" src="js/ck.js"></script>
+<script type="module" src="js/MyCustomButton.js"></script>
 <script src="js/jq-test.js"></script>
+
 
 
 </body>

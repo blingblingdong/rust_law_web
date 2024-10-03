@@ -3,7 +3,14 @@ const config = {
     apiUrl: "http://localhost:9090"
 };
 
+import {File} from './File.js';
+
 const test_user_name = "test_user";
+
+let globalShadowRoot;
+let host = document.getElementById('word-area');
+// 为宿主元素创建一个 Shadow Root
+globalShadowRoot = host.attachShadow({ mode: 'open' });
 
 document.getElementById('search-law-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -262,8 +269,9 @@ $(document).on('click', '.chapter-li-1 > a', function (event) {
 
 
 /*關於records*/
-$(document).on('click', '.the-dir', function () {// 停止事件冒泡
-    loadQuestions($(this).text());
+$(document).on('click', '.the-dir', async function () {// 停止事件冒泡
+    await loadQuestions($(this).text());
+    await loadFile(test_user_name, $(this).text());
     $("#in_folder").css("display", "block");
     $("#dir").css("display", "none");
     $(".record-footer").css("display", "flex");
@@ -271,34 +279,46 @@ $(document).on('click', '.the-dir', function () {// 停止事件冒泡
     $(".header-container").addClass("hideproperty");
 });
 
-$(document).on('click', '#delete-dir', function () {// 停止事件冒泡
+$(document).on('click', '#delete-dir', async function () {// 停止事件冒泡
     let dir = $("#folder-name").text();
     let answer = confirm(`確認刪除資料夾${dir}?`);
     if (answer) {
         $.ajax({
             url: `${config.apiUrl}/delete_dir_by_name/${dir}`,
             method: 'DELETE',
-            success: function (response) {
+            success: async function (response) {
                 alert("刪除成功")
                 $("#dir").css("display", "grid");
                 $("#record_table").css("display", "none");
                 $(".record-footer").css("display", "none")
-                load_all_dir();
             },
             error: function (xhr, status, error) {
                 alert("刪除失敗")
             }
         });
+
+        await delete_file(test_user_name, dir);
+        $("#dir").css("display", "grid");
+        $("#in_folder").css("display", "none");
+        $(".record-footer").css("display", "none");
+        $(".header-container").removeClass("hideproperty");
     }
 
 });
 
 async function loadQuestions(directory) {
-    const response = await fetch(`${config.apiUrl}/records_to_laws/test_user/${directory}`);
-    const tableHtml = await response.text();
 
-    const tableContainer = document.getElementById('record_table');
-    tableContainer.innerHTML = tableHtml;// 清空表格
+    $.ajax({
+        url: `${config.apiUrl}/records_to_laws/test_user/${directory}`,
+        method: 'GET',
+        success: function (response) {
+           $("#record_table").html(response);
+        },
+        error: function (xhr, status, error) {
+            alert("失敗");
+            console.log("Error: " + error);
+        }
+    });
 
 }
 
@@ -309,17 +329,21 @@ $("#record-card-btn").click(function () {
     $("#record-editor").css("display", "none");
 });
 
-$("#record-editor-btn").click(async function () {
-    $("#record_table").css("display", "none");
-    $("#record-editor").css("display", "block");
-    $(".record-footer").css("display", "flex");
-    let id = test_user_name + "-" + $("#folder-name").text();
+async function loadFile(user_name, dir) {
+    var id = user_name + "-" + dir;
     $.ajax({
         url: `${config.apiUrl}/file_html/${id}`,
         method: 'GET',
         success: function (response) {
-            $("#word-area").html(response);
-            let number =  $("#word-area").text().length;
+            var file = File.from_api_v2(response);
+
+            globalShadowRoot.innerHTML =
+                `<style>
+                    ${file.css}
+                </style>
+                ${file.content}
+    `;
+            let number = $("#word-area").text().trim().length;
             $("#text-number").html(number);
         },
         error: function (xhr, status, error) {
@@ -327,7 +351,13 @@ $("#record-editor-btn").click(async function () {
             console.log("Error: " + error);
         }
     });
+}
 
+$("#record-editor-btn").click(async function () {
+    $("#record_table").css("display", "none");
+    $("#record-editor").css("display", "block");
+    $(".record-footer").css("display", "flex");
+    await loadFile(test_user_name, $("#folder-name").text());
 });
 
 $("#back_to_folder").click(function () {
@@ -566,7 +596,6 @@ $(document).on('submit', '.law-note-form', async function (event) {
     let formId = $(this).attr('id');
     let textareaId = `#note-form-text-${formId.split('-')[3]}-${formId.split('-')[4]}`;
     let new_note = $(textareaId).val();
-    alert("lll");
     update_note("test_user", $("#folder-name").text(), formId.split('-')[3],  formId.split('-')[4], new_note);
     let note_area_id = "#law-note-area-" + formId.split('-')[3] + "-" + formId.split('-')[4];
     $(note_area_id).html(new_note);
@@ -580,7 +609,7 @@ async function update_note(user, dir, chapter, num, note) {
         contentType: 'application/json', // 确保发送 JSON 格式
         data: JSON.stringify({ note: note }), // 将 note 包装在 JSON 对象中
         success: function (response) {
-            alert("成功更新");
+            alert("ff");
         },
         error: function (xhr, status, error) {
             alert("更新失败");
@@ -597,9 +626,13 @@ $(document).on('submit', '.card-add-form', async function (event) {
     let folder = $("#folder-name").text();
     let chapter = $("#card-form-chapter").val();
     let num = $("#card-form-num").val();
-    add_to_dir(chapter, num, "test_user", folder);
+
+    // 確保add_to_dir完全執行後，再執行loadQuestions
+    await add_to_dir(chapter, num, "test_user", folder);
     loadQuestions(folder);
+
 });
+
 
 
 
@@ -616,13 +649,52 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-$("#add-bold").click(function () {
-    $("#markdown").append("**粗體字**");
+
+$(document).on('click', '#add-bold', function () {
+    document.getElementById('markdown').value += `**bold**`;
 });
 
-$("#add-picture").click(function () {
-    $("#markdown").append("![](照片網址)");
+$(document).on('click', '#add-picture', async function () {
+
+    const popupHTML = `
+        <div class="popup" id="popup-photo">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h3>加入css</h3>
+                    <span class="close-btn" onclick="hidePopup_photo()">X</span>
+                </div>
+                <div class="popup-body">
+                   <form id="add_photo_form">
+                    <input type="text" id="url-name" placeholder="網址" required>
+                    <button type="submit">創建</button>
+                    </form>
+                </div>
+                <div class="popup-footer">
+                    <button onclick="hidePopup_photo()">確定</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // 插入彈出視窗到 body
+    document.body.insertAdjacentHTML('beforeend', popupHTML);
+
+    // 顯示彈出視窗
+    document.getElementById('popup-photo').style.display = 'flex';
+
+
+    $(document).on('submit', '#add_photo_form', function (event) {
+        event.preventDefault(); // 阻止表單提交後刷新頁面
+        var url_name = $("#url-name").val();
+
+    });
+
+
+
+    document.getElementById('markdown').value += `![](照片網址)`;
 });
+
+
 
 $("#add-css").click(function () {
     const popupHTML = `
@@ -699,17 +771,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 $("#record-viewer-tools-edit").click(function () {
-    $("#record-writer").css("display", "flex");
+    $("#record-writer").css("display", "block");
     $("#record-viewer").css("display", "none");
     $(".record-footer").css("display", "none");
     let id = test_user_name + "-" + $("#folder-name").text();
-    alert(id);
 
     $.ajax({
-        url: `${config.apiUrl}/file_markdown/${id}`,
+        url: `${config.apiUrl}/file_html/${id}`,
         method: 'GET',
         success: function (response) {
-            $("#markdown").html(response);
+            var content = File.from_api_v2(response).content;
+            updateEditorContent(content)
         },
         error: function (xhr, status, error) {
             alert("失敗");
@@ -725,41 +797,56 @@ $("#confirm-edit").click(async function () {
     let text = $("#preview").html();
 
     let id = test_user_name + "-" + $("#folder-name").text();
-    let content = $("#markdown").val();
-    alert(content);
+    let content = $(".ck-content").html();
 
     //更新筆記內容
-    $.ajax({
-        url: `${config.apiUrl}/file/${id}`,
-        method: 'PUT',
-        contentType: 'application/json', // 确保发送 JSON 格式
-        data: JSON.stringify({ content: content }), // 将 note 包装在 JSON 对象中
-        success: function (response) {
-            alert("成功更新");
-        },
-        error: function (xhr, status, error) {
-            alert("更新失败");
-            console.log("Error: " + error);
-        }
-    });
+    async function update_content(){
+        $.ajax({
+            url: `${config.apiUrl}/file/${id}`,
+            method: 'PUT',
+            contentType: 'application/json', // 确保发送 JSON 格式
+            data: JSON.stringify({ content: content }), // 将 note 包装在 JSON 对象中
+            success: function (response) {
+                var css_from_rsponse = File.from_api_v2(response);
+                alert(css_from_rsponse.id);
+            },
+            error: function (xhr, status, error) {
+                alert("更新失败");
+                console.log("Error: " + error);
+            }
+        });
+    }
+    await update_content();
 
-    $("#word-area").html(text);
 
+    async function update_word_area() {
+        // 更新viewer
+        $.ajax({
+            url: `${config.apiUrl}/file_html/${id}`,
+            method: 'GET',
+            success: function (response) {
 
-    // 更新viewer
-    $.ajax({
-        url: `${config.apiUrl}/file_html/${id}`,
-        method: 'GET',
-        success: function (response) {
-            $("#word-area").html(response);
-            let number =  $("#word-area").text().trim().length;
-            $("#text-number").html(number);
-        },
-        error: function (xhr, status, error) {
-            alert("失敗");
-            console.log("Error: " + error);
-        }
-    });
+                var file = File.from_api_v2(response);
+                
+
+                globalShadowRoot.innerHTML =
+                    `<style>
+                    ${file.css}
+                </style>
+                ${file.content}
+    `;
+                let number = $("#word-area").text().trim().length;
+                $("#text-number").html(number);
+            },
+            error: function (xhr, status, error) {
+                alert("失敗");
+                console.log("Error: " + error);
+            }
+        });
+
+    }
+
+    await update_word_area();
 
     // 更新筆記字數
     let number = $("#preview").text().length;
@@ -770,6 +857,19 @@ $("#confirm-edit").click(async function () {
     $(".record-footer").css("display", "flex");
 });
 
+
+async function delete_file(user_name, directory) {
+    let id = user_name + "-" + directory;
+    try {
+        let res = await fetch(`${config.apiUrl}/file/${id}`, {
+            method: 'DELETE',
+        });
+        alert("成功加入"+ res);
+    } catch (error) {
+        alert(error.message);
+        console.log("Error: " + error);
+    }
+}
 
 
 async function add_file(user_name, directory, content, css) {
@@ -790,6 +890,43 @@ async function add_file(user_name, directory, content, css) {
         console.log("Error: " + error);
     }
 }
+
+import { editorConfig } from './ck.js';
+import {ClassicEditor,} from 'ckeditor5';
+
+
+
+let editorInstance;
+
+async function load_editor() {
+    ClassicEditor
+        .create(document.querySelector('#markdown'), editorConfig)
+        .then(editor => {
+            editorInstance = editor;
+            $(".ck-toolbar__items").append(`<span>法律相關：</span><button class="ck ck-button ck-disabled ck-off", id="ck-law">插入法條</button>`);
+            $(".ck-toolbar__items").append(`<button class="ck ck-button ck-disabled ck-off", id="ck-law-card">插入卡片</button>`);
+        })
+        .catch(error => {
+            console.error('There was a problem initializing the editor:', error);
+        });
+}
+
+$(document).on('click', '#ck-law', function () {
+    $(".ck-content").html("<h1>");
+});
+
+async function updateEditorContent(newContent) {
+    if (editorInstance) {
+        editorInstance.setData(newContent);
+    } else {
+        console.error('Editor has not been initialized yet.');
+        setTimeout(() => updateEditorContent(newContent), 1000);  // 延遲1秒後重試
+    }
+}
+
+await load_editor();
+
+
 
 
 

@@ -101,6 +101,27 @@ impl Files {
         }
     }
 
+    pub async fn delete_file(&self, id: String) -> Result<File, handle_errors::Error> {
+        match sqlx::query(
+            "DELETE FROM file
+            Where id = $1
+            RETURNING id, content, css, user_name, directory;"
+        )
+            .bind(id)
+            .map(|row: PgRow| File {
+                id: row.get("id"),
+                content: row.get("content"),
+                css: row.get("css"),
+                user_name: row.get("user_name"),
+                directory: row.get("directory"),
+            })
+            .fetch_one(&self.connection)
+            .await {
+            Ok(file) => Ok(file),
+            Err(e) => Err(handle_errors::Error::DatabaseQueryError(e))
+        }
+    }
+
 
 
 }

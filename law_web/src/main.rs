@@ -5,7 +5,8 @@ use handle_errors::return_error;
 use warp::{http::Method, Filter};
 use law_rs::Laws;
 use tracing_subscriber::fmt::format::FmtSpan;
-use crate::routes::file::{get_content_markdown, update_content};
+use crate::routes::file::{delete_file, get_content_markdown, update_content};
+use crate::routes::law::get_on_law;
 use crate::routes::record::{get_dir_for_pop, update_note};
 
 #[tokio::main]
@@ -156,6 +157,20 @@ async fn main() {
         .and(files_filter.clone())
         .and_then(routes::file::get_content_html);
 
+    let get_one_law = warp::get()
+        .and(warp::path("one_law"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(store_filter.clone())
+        .and_then(routes::law::get_on_law);
+
+    let delete_file = warp::delete()
+        .and(warp::path("file"))
+        .and(warp::path::param::<String>())
+        .and(warp::path::end())
+        .and(files_filter.clone())
+        .and_then(routes::file::delete_file);
 
 
     let static_files = warp::fs::dir("static");
@@ -168,6 +183,7 @@ async fn main() {
         .or(add_record)
         .or(get_table)
         .or(get_dir)
+        .or(get_one_law)
         .or(get_content_markdown)
         .or(get_search_chapters)
         .or(get_all_chapters)
@@ -179,6 +195,7 @@ async fn main() {
         .or(update_note)
         .or(add_file)
         .or(update_content)
+        .or(delete_file)
         .with(warp::trace::request())// 提供靜態文件
         .with(cors)
         .recover(return_error);

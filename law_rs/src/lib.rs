@@ -4,7 +4,7 @@ use std::fs::File;
 use csv::{Reader, Writer};
 use anyhow::Result;
 use indexmap::{IndexMap};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgPoolOptions, PgPool, PgRow};
 use sqlx::{Row};
 
@@ -230,7 +230,7 @@ pub fn group(map:IndexMap<String, Laws>) -> Laws {
 }
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Deserialize, Clone, Serialize)]
 pub struct law {
     pub id: String,
     pub num: String,

@@ -24,7 +24,7 @@ pub async fn get_content_markdown(id: String, files: Files) -> Result<impl warp:
     match files.get_file(id.to_string()).await {
         Ok(file) => {
             info!("成功獲取：{}", file.id);
-            Ok(warp::reply::html(file.content))
+            Ok(warp::reply::json(&file))
         },
         Err(e) => Err(warp::reject::custom(e))
     }
@@ -38,7 +38,8 @@ pub async fn get_content_html(id: String, files: Files) -> Result<impl warp::Rep
             let parser = Parser::new_ext(&file.content, Options::all());
             let mut html_output = String::new();
             html::push_html(&mut html_output, parser);
-            Ok(warp::reply::html(html_output))
+            let json_file = File { id: file.id, content: html_output, css: file.css, user_name: file.user_name, directory: file.directory};
+            Ok(warp::reply::json(&json_file))
         },
         Err(e) => Err(warp::reject::custom(e))
     }
@@ -54,6 +55,19 @@ pub async fn update_content(id: String, files: Files , contnet: UpdateContent) -
     let res = match files.update_content(id.to_string(), contnet.content).await {
         Ok(file) => {
             info!("成功更新筆記：{}",file.id);
+            file
+        },
+        Err(e) => return Err(warp::reject::custom(e))
+    };
+    Ok(warp::reply::json(&res))
+}
+
+
+pub async fn delete_file(id: String, files: Files) -> Result<impl warp::Reply, warp::Rejection> {
+    let id = percent_decode_str(&id).decode_utf8_lossy();
+    let res = match files.delete_file(id.to_string()).await {
+        Ok(file) => {
+            info!("成功刪除筆記：{}",file.id);
             file
         },
         Err(e) => return Err(warp::reject::custom(e))
